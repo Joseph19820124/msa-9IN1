@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  # Databases
+  postgres-orders:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: food_delivery_orders_php
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5460:5432"
+    volumes:
+      - postgres_orders_data:/var/lib/postgresql/data
+
+  postgres-restaurants:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: food_delivery_restaurants_php
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5461:5432"
+    volumes:
+      - postgres_restaurants_data:/var/lib/postgresql/data
+
+  postgres-kitchen:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: food_delivery_kitchen_php
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5462:5432"
+    volumes:
+      - postgres_kitchen_data:/var/lib/postgresql/data
+
+  postgres-delivery:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: food_delivery_delivery_php
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5463:5432"
+    volumes:
+      - postgres_delivery_data:/var/lib/postgresql/data
+
+  postgres-accounting:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: food_delivery_accounting_php
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5464:5432"
+    volumes:
+      - postgres_accounting_data:/var/lib/postgresql/data
+
+  # Redis for notifications
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6381:6379"
+
+  # Microservices
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "3020:80"
+    environment:
+      - ORDER_SERVICE_URL=http://order-service
+      - RESTAURANT_SERVICE_URL=http://restaurant-service
+      - KITCHEN_SERVICE_URL=http://kitchen-service
+      - DELIVERY_SERVICE_URL=http://delivery-service
+      - ACCOUNTING_SERVICE_URL=http://accounting-service
+      - NOTIFICATION_SERVICE_URL=http://notification-service
+    depends_on:
+      - order-service
+      - restaurant-service
+      - kitchen-service
+      - delivery-service
+      - accounting-service
+      - notification-service
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "3021:80"
+    environment:
+      - DATABASE_URL=pgsql:host=postgres-orders;port=5432;dbname=food_delivery_orders_php;user=postgres;password=password
+      - NOTIFICATION_SERVICE_URL=http://notification-service
+    depends_on:
+      - postgres-orders
+
+  restaurant-service:
+    build: ./restaurant-service
+    ports:
+      - "3022:80"
+    environment:
+      - DATABASE_URL=pgsql:host=postgres-restaurants;port=5432;dbname=food_delivery_restaurants_php;user=postgres;password=password
+    depends_on:
+      - postgres-restaurants
+
+  kitchen-service:
+    build: ./kitchen-service
+    ports:
+      - "3023:80"
+    environment:
+      - DATABASE_URL=pgsql:host=postgres-kitchen;port=5432;dbname=food_delivery_kitchen_php;user=postgres;password=password
+      - ORDER_SERVICE_URL=http://order-service
+      - NOTIFICATION_SERVICE_URL=http://notification-service
+    depends_on:
+      - postgres-kitchen
+
+  delivery-service:
+    build: ./delivery-service
+    ports:
+      - "3024:80"
+    environment:
+      - DATABASE_URL=pgsql:host=postgres-delivery;port=5432;dbname=food_delivery_delivery_php;user=postgres;password=password
+      - ORDER_SERVICE_URL=http://order-service
+      - NOTIFICATION_SERVICE_URL=http://notification-service
+    depends_on:
+      - postgres-delivery
+
+  accounting-service:
+    build: ./accounting-service
+    ports:
+      - "3025:80"
+    environment:
+      - DATABASE_URL=pgsql:host=postgres-accounting;port=5432;dbname=food_delivery_accounting_php;user=postgres;password=password
+      - ORDER_SERVICE_URL=http://order-service
+    depends_on:
+      - postgres-accounting
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "3026:80"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+volumes:
+  postgres_orders_data:
+  postgres_restaurants_data:
+  postgres_kitchen_data:
+  postgres_delivery_data:
+  postgres_accounting_data:

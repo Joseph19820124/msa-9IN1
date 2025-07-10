@@ -1,0 +1,61 @@
+{
+  "name": "food-delivery-microservices-typescript",
+  "version": "1.0.0",
+  "description": "Food Delivery Microservices Platform built with TypeScript, Express, and PostgreSQL",
+  "private": true,
+  "scripts": {
+    "install:all": "npm run install:shared && npm run install:services",
+    "install:shared": "cd shared && npm install",
+    "install:services": "for service in api-gateway order-service restaurant-service kitchen-service delivery-service accounting-service notification-service; do cd $service && npm install && cd ..; done",
+    "build:all": "npm run build:shared && npm run build:services",
+    "build:shared": "cd shared && npm run build",
+    "build:services": "for service in api-gateway order-service restaurant-service kitchen-service delivery-service accounting-service notification-service; do cd $service && npm run build && cd ..; done",
+    "dev:infrastructure": "docker-compose up -d consul postgres redis",
+    "dev:services": "concurrently \"cd api-gateway && npm run dev\" \"cd order-service && npm run dev\" \"cd restaurant-service && npm run dev\" \"cd kitchen-service && npm run dev\" \"cd delivery-service && npm run dev\" \"cd accounting-service && npm run dev\" \"cd notification-service && npm run dev\"",
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "restart": "docker-compose restart",
+    "logs": "docker-compose logs -f",
+    "logs:api-gateway": "docker-compose logs -f api-gateway",
+    "logs:order": "docker-compose logs -f order-service",
+    "logs:restaurant": "docker-compose logs -f restaurant-service",
+    "logs:kitchen": "docker-compose logs -f kitchen-service",
+    "logs:delivery": "docker-compose logs -f delivery-service",
+    "logs:accounting": "docker-compose logs -f accounting-service",
+    "logs:notification": "docker-compose logs -f notification-service",
+    "test:all": "for service in api-gateway order-service restaurant-service kitchen-service delivery-service accounting-service notification-service; do cd $service && npm test && cd ..; done",
+    "lint:all": "for service in api-gateway order-service restaurant-service kitchen-service delivery-service accounting-service notification-service; do cd $service && npm run lint && cd ..; done",
+    "lint:fix:all": "for service in api-gateway order-service restaurant-service kitchen-service delivery-service accounting-service notification-service; do cd $service && npm run lint:fix && cd ..; done",
+    "clean": "docker-compose down -v && docker system prune -f",
+    "reset": "npm run clean && npm run start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "workspaces": [
+    "shared",
+    "api-gateway",
+    "order-service", 
+    "restaurant-service",
+    "kitchen-service",
+    "delivery-service", 
+    "accounting-service",
+    "notification-service"
+  ],
+  "keywords": [
+    "microservices",
+    "food-delivery",
+    "typescript",
+    "express",
+    "postgresql",
+    "redis",
+    "consul",
+    "docker"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

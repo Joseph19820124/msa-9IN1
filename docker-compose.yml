@@ -1,0 +1,162 @@
+version: '3.8'
+services:
+  # 服务发现
+  eureka-server:
+    image: netflix/eureka:1.10.11
+    ports:
+      - "8761:8761"
+    environment:
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+
+  # 订单服务
+  order-service:
+    build: ./order-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - order-db
+      - eureka-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://order-db:5432/orderdb
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+
+  order-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=orderdb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - order_data:/var/lib/postgresql/data
+
+  # 餐厅服务
+  restaurant-service:
+    build: ./restaurant-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - restaurant-db
+      - eureka-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://restaurant-db:5432/restaurantdb
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+
+  restaurant-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=restaurantdb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - restaurant_data:/var/lib/postgresql/data
+
+  # 厨房服务
+  kitchen-service:
+    build: ./kitchen-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kitchen-db
+      - eureka-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://kitchen-db:5432/kitchendb
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+
+  kitchen-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=kitchendb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - kitchen_data:/var/lib/postgresql/data
+
+  # 配送服务
+  delivery-service:
+    build: ./delivery-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - delivery-db
+      - eureka-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://delivery-db:5432/deliverydb
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+
+  delivery-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=deliverydb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - delivery_data:/var/lib/postgresql/data
+
+  # 会计服务
+  accounting-service:
+    build: ./accounting-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - accounting-db
+      - eureka-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://accounting-db:5432/accountingdb
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+
+  accounting-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=accountingdb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - accounting_data:/var/lib/postgresql/data
+
+  # 通知服务
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - notification-db
+      - eureka-server
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://notification-db:5432/notificationdb
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+
+  notification-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=notificationdb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - notification_data:/var/lib/postgresql/data
+
+  # 餐厅Web界面
+  restaurant-web-ui:
+    build: ./restaurant-web-ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+
+volumes:
+  order_data:
+  restaurant_data:
+  kitchen_data:
+  delivery_data:
+  accounting_data:
+  notification_data:

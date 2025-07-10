@@ -1,0 +1,238 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  consul:
+    image: consul:1.15
+    container_name: consul
+    ports:
+      - "8500:8500"
+    command: agent -dev -client=0.0.0.0 -ui
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password123
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Application Services
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - JWT_SECRET=your-jwt-secret-key-change-in-production
+    depends_on:
+      - consul
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/order-service?authSource=admin
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:3002
+      - ACCOUNTING_SERVICE_URL=http://accounting-service:3005
+      - KITCHEN_SERVICE_URL=http://kitchen-service:3003
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+    depends_on:
+      - consul
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  restaurant-service:
+    build: ./restaurant-service
+    container_name: restaurant-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - HOST=0.0.0.0
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/restaurant-service?authSource=admin
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+    depends_on:
+      - consul
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  kitchen-service:
+    build: ./kitchen-service
+    container_name: kitchen-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - HOST=0.0.0.0
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/kitchen-service?authSource=admin
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - ORDER_SERVICE_URL=http://order-service:3001
+      - DELIVERY_SERVICE_URL=http://delivery-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+      - MAX_CAPACITY=10
+      - PREPARATION_TIME_BUFFER=5
+    depends_on:
+      - consul
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  delivery-service:
+    build: ./delivery-service
+    container_name: delivery-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - HOST=0.0.0.0
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/delivery-service?authSource=admin
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - ORDER_SERVICE_URL=http://order-service:3001
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+      - MAX_DELIVERY_RADIUS=20
+      - AVERAGE_SPEED=30
+      - MAX_DELIVERY_TIME=60
+    depends_on:
+      - consul
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  accounting-service:
+    build: ./accounting-service
+    container_name: accounting-service
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - HOST=0.0.0.0
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/accounting-service?authSource=admin
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+      - STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+      - STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+      - PLATFORM_FEE_RATE=0.15
+      - PAYMENT_PROCESSING_FEE_RATE=0.029
+      - FIXED_PROCESSING_FEE=0.30
+      - DEFAULT_TAX_RATE=0.0875
+    depends_on:
+      - consul
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=production
+      - PORT=3006
+      - HOST=0.0.0.0
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/notification-service?authSource=admin
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - EMAIL_SERVICE=gmail
+      - EMAIL_HOST=smtp.gmail.com
+      - EMAIL_PORT=587
+      - EMAIL_SECURE=false
+      - EMAIL_USER=your-email@gmail.com
+      - EMAIL_PASS=your-app-password
+      - EMAIL_FROM=Food Delivery <noreply@fooddelivery.com>
+      - TWILIO_ACCOUNT_SID=your-twilio-account-sid
+      - TWILIO_AUTH_TOKEN=your-twilio-auth-token
+      - TWILIO_FROM_NUMBER=+1234567890
+      - WEBSOCKET_ENABLED=true
+      - WEBSOCKET_CORS_ORIGIN=http://localhost:3000
+    depends_on:
+      - consul
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: MongoDB Express for database management
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=password123
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:password123@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin
+    depends_on:
+      - mongodb
+    profiles:
+      - tools
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

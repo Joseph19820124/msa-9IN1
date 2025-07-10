@@ -1,0 +1,42 @@
+.App {
+  text-align: left;
+}
+
+.site-layout {
+  margin-left: 200px;
+}
+
+.ant-layout-content {
+  background: #f0f2f5;
+}
+
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ant-statistic-content {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.kitchen-order-card {
+  transition: all 0.3s ease;
+}
+
+.kitchen-order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.priority-high {
+  border-left: 4px solid #ff4d4f !important;
+}
+
+.priority-medium {
+  border-left: 4px solid #fa8c16 !important;
+}
+
+.priority-normal {
+  border-left: 4px solid #52c41a !important;
+}

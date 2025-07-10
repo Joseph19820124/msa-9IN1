@@ -1,0 +1,160 @@
+version: '3.8'
+services:
+  # Service Discovery (Consul)
+  consul:
+    image: consul:1.15.3
+    ports:
+      - "8500:8500"
+    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - consul
+    environment:
+      - CONSUL_HOST=consul:8500
+
+  # Order Service
+  order-service:
+    build: ./order-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - order-db
+      - consul
+    environment:
+      - CONNECTIONSTRINGS__DEFAULTCONNECTION=Host=order-db;Database=orderdb;Username=admin;Password=password
+      - CONSUL_HOST=consul:8500
+
+  order-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=orderdb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - order_data:/var/lib/postgresql/data
+
+  # Restaurant Service
+  restaurant-service:
+    build: ./restaurant-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - restaurant-db
+      - consul
+    environment:
+      - CONNECTIONSTRINGS__DEFAULTCONNECTION=Host=restaurant-db;Database=restaurantdb;Username=admin;Password=password
+      - CONSUL_HOST=consul:8500
+
+  restaurant-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=restaurantdb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - restaurant_data:/var/lib/postgresql/data
+
+  # Kitchen Service
+  kitchen-service:
+    build: ./kitchen-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kitchen-db
+      - consul
+    environment:
+      - CONNECTIONSTRINGS__DEFAULTCONNECTION=Host=kitchen-db;Database=kitchendb;Username=admin;Password=password
+      - CONSUL_HOST=consul:8500
+
+  kitchen-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=kitchendb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - kitchen_data:/var/lib/postgresql/data
+
+  # Delivery Service
+  delivery-service:
+    build: ./delivery-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - delivery-db
+      - consul
+    environment:
+      - CONNECTIONSTRINGS__DEFAULTCONNECTION=Host=delivery-db;Database=deliverydb;Username=admin;Password=password
+      - CONSUL_HOST=consul:8500
+
+  delivery-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=deliverydb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - delivery_data:/var/lib/postgresql/data
+
+  # Accounting Service
+  accounting-service:
+    build: ./accounting-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - accounting-db
+      - consul
+    environment:
+      - CONNECTIONSTRINGS__DEFAULTCONNECTION=Host=accounting-db;Database=accountingdb;Username=admin;Password=password
+      - CONSUL_HOST=consul:8500
+
+  accounting-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=accountingdb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - accounting_data:/var/lib/postgresql/data
+
+  # Notification Service
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - notification-db
+      - consul
+    environment:
+      - CONNECTIONSTRINGS__DEFAULTCONNECTION=Host=notification-db;Database=notificationdb;Username=admin;Password=password
+      - CONSUL_HOST=consul:8500
+
+  notification-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=notificationdb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - notification_data:/var/lib/postgresql/data
+
+  # Restaurant Web UI
+  restaurant-web-ui:
+    build: ./restaurant-web-ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+
+volumes:
+  order_data:
+  restaurant_data:
+  kitchen_data:
+  delivery_data:
+  accounting_data:
+  notification_data:
